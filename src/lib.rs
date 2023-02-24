@@ -13,11 +13,11 @@ pub enum PortState {
     Disabled,
 }
 
-impl Into<bool> for PortState {
-    fn into(self) -> bool {
-        match self {
-            PortState::Enabled => true,
-            PortState::Disabled => false,
+impl From<bool> for PortState {
+    fn from(value: bool) -> Self {
+        match value {
+            true => PortState::Enabled,
+            false => PortState::Disabled,
         }
     }
 }
