@@ -57,8 +57,8 @@ where
     }
 
     /// Sets the address
-    pub fn with_address(mut self, write: u8, read: u8) -> Self {
-        self.address = write;
+    pub fn with_address(mut self, address: u8) -> Self {
+        self.address = address;
         self
     }
 
