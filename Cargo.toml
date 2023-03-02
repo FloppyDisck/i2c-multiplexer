@@ -1,7 +1,7 @@
 [package]
 name = "i2c-multiplexer"
 description = "An I2C Multiplexer library that supports the PCA9546 and TCA9546A chips"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/FloppyDisck/i2c-multiplexer"
@@ -11,9 +11,14 @@ categories = ["embedded"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+bus = ["dep:shared-bus"]
+
 [dependencies]
 embedded-svc            = "0.22.0"
 embedded-hal            = "0.2.7"
+shared-bus = { version="0.2.5", features=['std'], optional = true }
 
 crc = "3.0.0"
 thiserror = "1.0.38"

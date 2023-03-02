@@ -1,9 +1,13 @@
+#[cfg(feature = "bus")]
+pub mod bus;
 pub mod error;
 
 use embedded_hal::blocking::i2c;
 use error::{MultiplexerError, Result};
 
 pub mod prelude {
+    #[cfg(feature = "bus")]
+    pub use crate::bus::{BusPort, MultiplexedBus};
     pub use crate::{error::MultiplexerError, Multiplexer, PortState};
 }
 
@@ -29,6 +33,20 @@ pub struct Multiplexer<I2C: 'static + Send + Sync> {
     state: [bool; 4],
 }
 
+pub(crate) fn address_from_pins(a0: bool, a1: bool, a2: bool) -> u8 {
+    let mut address = 0b1110_0000;
+    if a0 {
+        address |= 0b0000_0001;
+    }
+    if a1 {
+        address |= 0b0000_0010;
+    }
+    if a2 {
+        address |= 0b0000_0100;
+    }
+    address
+}
+
 impl<I2C> Multiplexer<I2C>
 where
     I2C: i2c::WriteRead + i2c::Write + Send + Sync,
@@ -43,16 +61,7 @@ where
 
     /// Sets the address according to the enabled hardware settings
     pub fn with_address_pins(mut self, a0: bool, a1: bool, a2: bool) -> Self {
-        self.address = 0b1110_0000;
-        if a0 {
-            self.address |= 0b0000_0001;
-        }
-        if a1 {
-            self.address |= 0b0000_0010;
-        }
-        if a2 {
-            self.address |= 0b0000_0100;
-        }
+        self.address = address_from_pins(a0, a1, a2);
         self
     }
 

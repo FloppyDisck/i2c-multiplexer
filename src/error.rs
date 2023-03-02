@@ -8,6 +8,8 @@ pub enum MultiplexerError {
     WriteReadI2CError,
     #[error("Write I2C Error")]
     WriteI2CError,
+    #[error("Read I2C Error")]
+    ReadI2CError,
     #[error("Incorrect port supplies")]
     PortError,
 }
