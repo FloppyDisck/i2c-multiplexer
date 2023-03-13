@@ -1,17 +1,13 @@
-use crate::error::MultiplexerError;
-use crate::{address_from_pins, error::Result as CrateResult};
+use crate::{address_from_pins, error::MultiplexerError, error::Result as CrateResult};
 use embedded_hal::blocking::i2c::{Read, SevenBitAddress, Write, WriteRead};
-use shared_bus::{BusManagerStd, I2cProxy};
-use std::sync::Mutex;
 
-pub struct MultiplexedBus<'a, BUS> {
-    bus: &'a BusManagerStd<BUS>,
+pub struct MultiplexerBus {
     address: u8,
 }
 
-impl<'a, BUS> MultiplexedBus<'a, BUS> {
-    pub fn new(bus: &'a BusManagerStd<BUS>) -> Self {
-        Self { bus, address: 0x70 }
+impl MultiplexerBus {
+    pub fn new() -> Self {
+        Self { address: 0x70 }
     }
 
     /// Sets the address according to the enabled hardware settings
@@ -26,31 +22,31 @@ impl<'a, BUS> MultiplexedBus<'a, BUS> {
         self
     }
 
-    pub fn new_port(&self, port: u8) -> BusPort<'a, BUS> {
+    pub fn new_port<I2C: 'static + Send + Sync>(&self, i2c: I2C, port: u8) -> BusPort<I2C> {
         let id = match port {
-            1 => 0b000_0001,
-            2 => 0b000_0010,
-            3 => 0b000_0100,
+            0 => 0b000_0001,
+            1 => 0b000_0010,
+            2 => 0b000_0100,
             _ => 0b000_1000,
         };
 
         BusPort {
-            bus: self.bus.acquire_i2c(),
+            bus: i2c,
             address: self.address,
             port: id,
         }
     }
 }
 
-pub struct BusPort<'a, BUS> {
-    bus: I2cProxy<'a, Mutex<BUS>>,
+pub struct BusPort<I2C: 'static + Send + Sync> {
+    bus: I2C,
     address: u8,
     port: u8,
 }
 
-impl<'a, BUS> BusPort<'a, BUS>
+impl<I2C> BusPort<I2C>
 where
-    BUS: Write,
+    I2C: Write + Send + Sync,
 {
     fn open_port(&mut self) -> CrateResult<()> {
         match self.bus.write(self.address, &[self.port]) {
@@ -60,9 +56,9 @@ where
     }
 }
 
-impl<'a, BUS> Write for BusPort<'a, BUS>
+impl<I2C> Write for BusPort<I2C>
 where
-    BUS: Write,
+    I2C: Write + Send + Sync,
 {
     type Error = MultiplexerError;
 
@@ -75,9 +71,9 @@ where
     }
 }
 
-impl<'a, BUS> Read for BusPort<'a, BUS>
+impl<I2C> Read for BusPort<I2C>
 where
-    BUS: Read + Write,
+    I2C: Read + Write + Send + Sync,
 {
     type Error = MultiplexerError;
 
@@ -90,9 +86,9 @@ where
     }
 }
 
-impl<'a, BUS> WriteRead for BusPort<'a, BUS>
+impl<I2C> WriteRead for BusPort<I2C>
 where
-    BUS: WriteRead + Write,
+    I2C: WriteRead + Write + Send + Sync,
 {
     type Error = MultiplexerError;
 
@@ -119,7 +115,6 @@ mod test {
     };
     use embedded_hal_mock::common::Generic;
     use embedded_hal_mock::i2c::{Mock, Transaction};
-    use rstest::*;
 
     #[test]
     fn multi_port_write() {
@@ -128,10 +123,10 @@ mod test {
 
         // Use port 1, 3, 2, 4 in that order
         let ports = vec![
-            (1, 0b000_0001),
-            (3, 0b000_0100),
-            (2, 0b000_0010),
-            (4, 0b000_1000),
+            (0, 0b000_0001),
+            (2, 0b000_0100),
+            (1, 0b000_0010),
+            (3, 0b000_1000),
         ];
 
         let expectations = [
@@ -147,12 +142,12 @@ mod test {
 
         let i2c = Mock::new(&expectations);
         let bus = shared_bus::new_std!(Generic<Transaction> = i2c).unwrap();
-        let multiplexer = MultiplexedBus::new(bus).with_address(multiplexer_addr);
+        let multiplexer = MultiplexerBus::new().with_address(multiplexer_addr);
 
-        let mut multiplexed_i2c_a = multiplexer.new_port(ports[0].0);
-        let mut multiplexed_i2c_b = multiplexer.new_port(ports[1].0);
-        let mut multiplexed_i2c_c = multiplexer.new_port(ports[2].0);
-        let mut multiplexed_i2c_d = multiplexer.new_port(ports[3].0);
+        let mut multiplexed_i2c_a = multiplexer.new_port(bus.acquire_i2c(), ports[0].0);
+        let mut multiplexed_i2c_b = multiplexer.new_port(bus.acquire_i2c(), ports[1].0);
+        let mut multiplexed_i2c_c = multiplexer.new_port(bus.acquire_i2c(), ports[2].0);
+        let mut multiplexed_i2c_d = multiplexer.new_port(bus.acquire_i2c(), ports[3].0);
 
         assert!(multiplexed_i2c_a
             .write(component_addr, &[0x05, 0x43])
@@ -173,10 +168,10 @@ mod test {
 
         // Use port 1, 3, 2, 4 in that order
         let ports = vec![
-            (1, 0b000_0001),
-            (3, 0b000_0100),
-            (2, 0b000_0010),
-            (4, 0b000_1000),
+            (0, 0b000_0001),
+            (2, 0b000_0100),
+            (1, 0b000_0010),
+            (3, 0b000_1000),
         ];
 
         let expectations = [
@@ -192,12 +187,12 @@ mod test {
 
         let i2c = Mock::new(&expectations);
         let bus = shared_bus::new_std!(Generic<Transaction> = i2c).unwrap();
-        let multiplexer = MultiplexedBus::new(bus).with_address(multiplexer_addr);
+        let multiplexer = MultiplexerBus::new().with_address(multiplexer_addr);
 
-        let mut multiplexed_i2c_a = multiplexer.new_port(ports[0].0);
-        let mut multiplexed_i2c_b = multiplexer.new_port(ports[1].0);
-        let mut multiplexed_i2c_c = multiplexer.new_port(ports[2].0);
-        let mut multiplexed_i2c_d = multiplexer.new_port(ports[3].0);
+        let mut multiplexed_i2c_a = multiplexer.new_port(bus.acquire_i2c(), ports[0].0);
+        let mut multiplexed_i2c_b = multiplexer.new_port(bus.acquire_i2c(), ports[1].0);
+        let mut multiplexed_i2c_c = multiplexer.new_port(bus.acquire_i2c(), ports[2].0);
+        let mut multiplexed_i2c_d = multiplexer.new_port(bus.acquire_i2c(), ports[3].0);
 
         let mut ma = [0; 2];
         assert!(multiplexed_i2c_a.read(component_addr, &mut ma).is_ok());
@@ -223,10 +218,10 @@ mod test {
 
         // Use port 1, 3, 2, 4 in that order
         let ports = vec![
-            (1, 0b000_0001),
-            (3, 0b000_0100),
-            (2, 0b000_0010),
-            (4, 0b000_1000),
+            (0, 0b000_0001),
+            (2, 0b000_0100),
+            (1, 0b000_0010),
+            (3, 0b000_1000),
         ];
 
         let expectations = [
@@ -242,12 +237,12 @@ mod test {
 
         let i2c = Mock::new(&expectations);
         let bus = shared_bus::new_std!(Generic<Transaction> = i2c).unwrap();
-        let multiplexer = MultiplexedBus::new(bus).with_address(multiplexer_addr);
+        let multiplexer = MultiplexerBus::new().with_address(multiplexer_addr);
 
-        let mut multiplexed_i2c_a = multiplexer.new_port(ports[0].0);
-        let mut multiplexed_i2c_b = multiplexer.new_port(ports[1].0);
-        let mut multiplexed_i2c_c = multiplexer.new_port(ports[2].0);
-        let mut multiplexed_i2c_d = multiplexer.new_port(ports[3].0);
+        let mut multiplexed_i2c_a = multiplexer.new_port(bus.acquire_i2c(), ports[0].0);
+        let mut multiplexed_i2c_b = multiplexer.new_port(bus.acquire_i2c(), ports[1].0);
+        let mut multiplexed_i2c_c = multiplexer.new_port(bus.acquire_i2c(), ports[2].0);
+        let mut multiplexed_i2c_d = multiplexer.new_port(bus.acquire_i2c(), ports[3].0);
 
         let mut ma = [0x33, 0x43];
         assert!(multiplexed_i2c_a

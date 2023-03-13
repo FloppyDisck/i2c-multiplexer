@@ -13,16 +13,16 @@ categories = ["embedded"]
 
 [features]
 default = []
-bus = ["dep:shared-bus"]
+bus = []
 
 [dependencies]
 embedded-svc            = "0.22.0"
 embedded-hal            = "0.2.7"
-shared-bus = { version="0.2.5", features=['std'], optional = true }
 
 crc = "3.0.0"
 thiserror = "1.0.38"
 
 [dev-dependencies]
+shared-bus = { version="0.2.5", features=['std'] }
 embedded-hal-mock = "0.9.0"
 rstest = "0.16.0"

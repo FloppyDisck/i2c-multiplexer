@@ -7,7 +7,7 @@ use error::{MultiplexerError, Result};
 
 pub mod prelude {
     #[cfg(feature = "bus")]
-    pub use crate::bus::{BusPort, MultiplexedBus};
+    pub use crate::bus::{BusPort, MultiplexerBus};
     pub use crate::{error::MultiplexerError, Multiplexer, PortState};
 }
 
