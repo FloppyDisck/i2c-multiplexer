@@ -41,3 +41,19 @@ fn main() -> Result<()> {
     Multiplexer::new(i2c).with_ports([true, false, true, false])?;
 }
 ```
+
+## Initializing as bus using the `bus` flag
+```rust
+use i2c_multiplexer::prelude::*;
+
+fn main() -> Result<()> {
+    let i2c = SomeI2CInit;
+    
+    // Initialize multiplexer
+    let multiplexer = MultiplexerBus::new();
+
+    // Setup the i2c port
+    let port = 0;
+    let mut multiplexed_i2c = multiplexer.new_port(i2c, port);
+}
+```
