@@ -2,7 +2,7 @@
 pub mod bus;
 pub mod error;
 
-use embedded_hal::blocking::i2c;
+use embedded_hal::i2c::I2c;
 use error::{MultiplexerError, Result};
 
 pub mod prelude {
@@ -49,7 +49,7 @@ pub(crate) fn address_from_pins(a0: bool, a1: bool, a2: bool) -> u8 {
 
 impl<I2C> Multiplexer<I2C>
 where
-    I2C: i2c::WriteRead + i2c::Write + Send + Sync,
+    I2C: I2c + Send + Sync,
 {
     pub fn new(i2c: I2C) -> Self {
         Self {
@@ -92,7 +92,7 @@ where
 
 impl<I2C> Multiplexer<I2C>
 where
-    I2C: i2c::WriteRead + i2c::Write + Send + Sync,
+    I2C: I2c + Send + Sync,
 {
     /// Disables all ports
     pub fn with_ports_disabled(self) -> Result<Self> {
@@ -155,8 +155,9 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::address_from_pins;
     use crate::prelude::*;
-    use embedded_hal_mock::i2c::Mock;
+    use embedded_hal_mock::eh1::i2c::Mock;
     use rstest::*;
 
     #[rstest]
@@ -174,11 +175,6 @@ mod test {
     #[case([false, true, false], 0b1110_0010)]
     #[case([true, false, true], 0b1110_0101)]
     fn setup_address(#[case] addr: [bool; 3], #[case] result: u8) {
-        assert_eq!(
-            Multiplexer::new(Mock::new([]))
-                .with_address_pins(addr[0], addr[1], addr[2])
-                .address,
-            result
-        )
+        assert_eq!(address_from_pins(addr[0], addr[1], addr[2]), result)
     }
 }

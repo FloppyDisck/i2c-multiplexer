@@ -1,5 +1,5 @@
-use crate::{address_from_pins, error::MultiplexerError, error::Result as CrateResult};
-use embedded_hal::blocking::i2c::{Read, SevenBitAddress, Write, WriteRead};
+use crate::address_from_pins;
+use embedded_hal::i2c::{ErrorType, I2c, Operation, SevenBitAddress};
 
 pub struct MultiplexerBus {
     address: u8,
@@ -44,77 +44,32 @@ pub struct BusPort<I2C: 'static + Send + Sync> {
     port: u8,
 }
 
-impl<I2C> BusPort<I2C>
+impl<I2C> ErrorType for BusPort<I2C>
 where
-    I2C: Write + Send + Sync,
+    I2C: ErrorType,
 {
-    fn open_port(&mut self) -> CrateResult<()> {
-        match self.bus.write(self.address, &[self.port]) {
-            Ok(res) => Ok(res),
-            Err(_) => Err(MultiplexerError::WriteI2CError),
-        }
-    }
+    type Error = I2C::Error;
 }
 
-impl<I2C> Write for BusPort<I2C>
+impl<I2C> I2c for BusPort<I2C>
 where
-    I2C: Write + Send + Sync,
+    I2C: I2c + Send + Sync,
 {
-    type Error = MultiplexerError;
-
-    fn write(&mut self, address: SevenBitAddress, bytes: &[u8]) -> Result<(), Self::Error> {
-        self.open_port()?;
-        match self.bus.write(address, bytes) {
-            Ok(res) => Ok(res),
-            Err(_) => Err(MultiplexerError::WriteI2CError),
-        }
-    }
-}
-
-impl<I2C> Read for BusPort<I2C>
-where
-    I2C: Read + Write + Send + Sync,
-{
-    type Error = MultiplexerError;
-
-    fn read(&mut self, address: SevenBitAddress, bytes: &mut [u8]) -> Result<(), Self::Error> {
-        self.open_port()?;
-        match self.bus.read(address, bytes) {
-            Ok(res) => Ok(res),
-            Err(_) => Err(MultiplexerError::ReadI2CError),
-        }
-    }
-}
-
-impl<I2C> WriteRead for BusPort<I2C>
-where
-    I2C: WriteRead + Write + Send + Sync,
-{
-    type Error = MultiplexerError;
-
-    fn write_read(
+    fn transaction(
         &mut self,
         address: SevenBitAddress,
-        buffer_in: &[u8],
-        buffer_out: &mut [u8],
+        operations: &mut [Operation<'_>],
     ) -> Result<(), Self::Error> {
-        self.open_port()?;
-        match self.bus.write_read(address, buffer_in, buffer_out) {
-            Ok(res) => Ok(res),
-            Err(_) => Err(MultiplexerError::WriteReadI2CError),
-        }
+        self.bus.transaction(address, operations)
     }
 }
 
 #[cfg(test)]
 mod test {
     use crate::prelude::*;
-    use embedded_hal::prelude::{
-        _embedded_hal_blocking_i2c_Read, _embedded_hal_blocking_i2c_Write,
-        _embedded_hal_blocking_i2c_WriteRead,
-    };
+    use embedded_hal::i2c::I2c;
     use embedded_hal_mock::common::Generic;
-    use embedded_hal_mock::i2c::{Mock, Transaction};
+    use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
 
     #[test]
     fn multi_port_write() {
