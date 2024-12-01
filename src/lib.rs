@@ -148,7 +148,9 @@ where
     }
 
     fn i2c_write(&mut self, bytes: &[u8]) -> Result<(), I2C::Error> {
-        self.i2c.write(self.address, bytes).map_err(|err| MultiplexerError::I2CError(err))
+        self.i2c
+            .write(self.address, bytes)
+            .map_err(MultiplexerError::I2CError)
     }
 }
 

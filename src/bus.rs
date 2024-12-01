@@ -1,6 +1,6 @@
 use crate::address_from_pins;
-use embedded_hal::i2c::{ErrorType, I2c, Operation, SevenBitAddress};
 use crate::prelude::MultiplexerError;
+use embedded_hal::i2c::{ErrorType, I2c, Operation, SevenBitAddress};
 
 pub struct MultiplexerBus {
     address: u8,
@@ -57,42 +57,63 @@ where
     }
 }
 
-impl<I2C> ErrorType for BusPort<I2C> where I2C: I2c {
+impl<I2C> ErrorType for BusPort<I2C>
+where
+    I2C: I2c,
+{
     type Error = MultiplexerError<I2C::Error>;
 }
 
 impl<I2C> I2c for BusPort<I2C>
-where I2C: I2c
+where
+    I2C: I2c,
 {
     fn read(&mut self, address: SevenBitAddress, read: &mut [u8]) -> Result<(), Self::Error> {
         self.open_port()?;
-        self.bus.read(address, read).map_err(|err| MultiplexerError::I2CError(err))
+        self.bus
+            .read(address, read)
+            .map_err(|err| MultiplexerError::I2CError(err))
     }
 
     fn write(&mut self, address: SevenBitAddress, write: &[u8]) -> Result<(), Self::Error> {
         self.open_port()?;
-        self.bus.write(address, write).map_err(|err| MultiplexerError::I2CError(err))
+        self.bus
+            .write(address, write)
+            .map_err(|err| MultiplexerError::I2CError(err))
     }
 
-    fn write_read(&mut self, address: SevenBitAddress, write: &[u8], read: &mut [u8]) -> Result<(), Self::Error> {
+    fn write_read(
+        &mut self,
+        address: SevenBitAddress,
+        write: &[u8],
+        read: &mut [u8],
+    ) -> Result<(), Self::Error> {
         self.open_port()?;
-        self.bus.write_read(address, write, read).map_err(|err| MultiplexerError::I2CError(err))
+        self.bus
+            .write_read(address, write, read)
+            .map_err(|err| MultiplexerError::I2CError(err))
     }
 
-    fn transaction(&mut self, address: SevenBitAddress, operations: &mut [Operation<'_>]) -> Result<(), Self::Error> {
+    fn transaction(
+        &mut self,
+        address: SevenBitAddress,
+        operations: &mut [Operation<'_>],
+    ) -> Result<(), Self::Error> {
         self.open_port()?;
-        self.bus.transaction(address, operations).map_err(|err| MultiplexerError::I2CError(err))
+        self.bus
+            .transaction(address, operations)
+            .map_err(|err| MultiplexerError::I2CError(err))
     }
 }
 
 #[cfg(test)]
 mod test {
     extern crate alloc;
+    use crate::prelude::*;
     use alloc::vec;
     use core::cell::RefCell;
     use embedded_hal::i2c::I2c;
     use embedded_hal_bus::i2c::RefCellDevice;
-    use crate::prelude::*;
     use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
 
     #[test]
@@ -192,7 +213,7 @@ mod test {
             assert!(multiplexed_i2c_d.read(component_addr, &mut md).is_ok());
             assert_eq!(md, [0x45, 0x48]);
         }
-        
+
         i2c.into_inner().done();
     }
 
