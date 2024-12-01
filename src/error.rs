@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, MultiplexerError>;
+pub type Result<T> = core::result::Result<T, MultiplexerError>;
 
 #[derive(Error, Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum MultiplexerError {

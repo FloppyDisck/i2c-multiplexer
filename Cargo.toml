@@ -1,7 +1,7 @@
 [package]
 name = "i2c-multiplexer"
 description = "An I2C Multiplexer library that supports the PCA9546 and TCA9546A chips"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/FloppyDisck/i2c-multiplexer"
@@ -16,13 +16,10 @@ default = []
 bus = []
 
 [dependencies]
-embedded-svc            = "0.22.0"
-embedded-hal            = "0.2.7"
-
-crc = "3.0.0"
-thiserror = "1.0.38"
+embedded-hal = "1.0.0"
+thiserror = { version = "2.0.3", default-features = false }
 
 [dev-dependencies]
-shared-bus = { version="0.2.5", features=['std'] }
-embedded-hal-mock = "0.9.0"
+shared-bus = { version= "0.3.1", features=['std'] }
+embedded-hal-mock = "0.11.1"
 rstest = "0.16.0"

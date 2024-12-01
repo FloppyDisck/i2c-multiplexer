@@ -1,8 +1,10 @@
+#![no_std]
+
 #[cfg(feature = "bus")]
 pub mod bus;
 pub mod error;
 
-use embedded_hal::blocking::i2c;
+use embedded_hal::i2c::I2c;
 use error::{MultiplexerError, Result};
 
 pub mod prelude {
@@ -49,7 +51,7 @@ pub(crate) fn address_from_pins(a0: bool, a1: bool, a2: bool) -> u8 {
 
 impl<I2C> Multiplexer<I2C>
 where
-    I2C: i2c::WriteRead + i2c::Write + Send + Sync,
+    I2C: I2c + Send + Sync,
 {
     pub fn new(i2c: I2C) -> Self {
         Self {
@@ -92,7 +94,7 @@ where
 
 impl<I2C> Multiplexer<I2C>
 where
-    I2C: i2c::WriteRead + i2c::Write + Send + Sync,
+    I2C: I2c + Send + Sync,
 {
     /// Disables all ports
     pub fn with_ports_disabled(self) -> Result<Self> {
@@ -156,8 +158,15 @@ where
 #[cfg(test)]
 mod test {
     use crate::prelude::*;
-    use embedded_hal_mock::i2c::Mock;
+    use embedded_hal_mock::common::Generic;
+    use embedded_hal_mock::eh1::i2c::{Mock, Transaction};
     use rstest::*;
+
+    impl Multiplexer<Generic<Transaction>> {
+        fn done(mut self) {
+            self.i2c.done();
+        }
+    }
 
     #[rstest]
     #[case([true;4], 0b0000_1111)]
@@ -174,11 +183,9 @@ mod test {
     #[case([false, true, false], 0b1110_0010)]
     #[case([true, false, true], 0b1110_0101)]
     fn setup_address(#[case] addr: [bool; 3], #[case] result: u8) {
-        assert_eq!(
-            Multiplexer::new(Mock::new([]))
-                .with_address_pins(addr[0], addr[1], addr[2])
-                .address,
-            result
-        )
+        let i2c = Mock::new(&[]);
+        let multiplexer = Multiplexer::new(i2c).with_address_pins(addr[0], addr[1], addr[2]);
+        assert_eq!(multiplexer.address, result);
+        multiplexer.done();
     }
 }
