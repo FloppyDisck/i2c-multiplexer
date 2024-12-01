@@ -97,27 +97,27 @@ where
     I2C: I2c + Send + Sync,
 {
     /// Disables all ports
-    pub fn with_ports_disabled(self) -> Result<Self> {
+    pub fn with_ports_disabled(self) -> Result<Self, I2C::Error> {
         self.with_ports([false; 4])
     }
 
     /// Disables all ports
-    pub fn set_ports_disabled(mut self) -> Result<()> {
+    pub fn set_ports_disabled(mut self) -> Result<(), I2C::Error> {
         self.set_ports([false; 4])
     }
 
     /// Enables all ports
-    pub fn with_ports_enabled(self) -> Result<Self> {
+    pub fn with_ports_enabled(self) -> Result<Self, I2C::Error> {
         self.with_ports([true; 4])
     }
 
     /// Enables all ports
-    pub fn set_ports_enabled(mut self) -> Result<()> {
+    pub fn set_ports_enabled(mut self) -> Result<(), I2C::Error> {
         self.set_ports([true; 4])
     }
 
     /// Enables / Disables the selected port
-    pub fn set_port(&mut self, port: u8, state: impl Into<bool>) -> Result<()> {
+    pub fn set_port(&mut self, port: u8, state: impl Into<bool>) -> Result<(), I2C::Error> {
         if port >= 4 {
             return Err(MultiplexerError::PortError);
         }
@@ -130,28 +130,25 @@ where
     }
 
     /// Sets the selected port
-    pub fn with_port(mut self, port: u8, state: impl Into<bool>) -> Result<Self> {
+    pub fn with_port(mut self, port: u8, state: impl Into<bool>) -> Result<Self, I2C::Error> {
         self.set_port(port, state.into())?;
         Ok(self)
     }
 
     /// Enables / Disables the selected ports
-    pub fn set_ports(&mut self, ports: [bool; 4]) -> Result<()> {
+    pub fn set_ports(&mut self, ports: [bool; 4]) -> Result<(), I2C::Error> {
         let code = Self::port_code(ports);
         self.i2c_write(&[code])
     }
 
     /// Enables / Disables the selected ports
-    pub fn with_ports(mut self, ports: [bool; 4]) -> Result<Self> {
+    pub fn with_ports(mut self, ports: [bool; 4]) -> Result<Self, I2C::Error> {
         self.set_ports(ports)?;
         Ok(self)
     }
 
-    fn i2c_write(&mut self, bytes: &[u8]) -> Result<()> {
-        match self.i2c.write(self.address, bytes) {
-            Ok(res) => Ok(res),
-            Err(_) => Err(MultiplexerError::WriteI2CError),
-        }
+    fn i2c_write(&mut self, bytes: &[u8]) -> Result<(), I2C::Error> {
+        self.i2c.write(self.address, bytes).map_err(|err| MultiplexerError::I2CError(err))
     }
 }
 
